@@ -1,0 +1,114 @@
+# DearAlpha default configuration
+# Copy this to config.yaml and fill in your values.
+
+# ── WorldQuant Brain credentials ─────────────────────────────────────────────
+brain:
+  credentials: "credential.txt"   # path to ["email", "password"] JSON file
+
+# ── LLM backend for bare-signal generation ───────────────────────────────────
+# Supported providers: openrouter | anthropic | ollama | openai_compat
+llm:
+  provider: "openrouter"
+  api_key: ""                      # set via env var OPENROUTER_API_KEY or here
+  model: "anthropic/claude-3.5-sonnet"   # any model on openrouter.ai
+
+  # Alternative: use local Ollama
+  # provider: "ollama"
+  # base_url: "http://localhost:11434"
+  # model: "deepseek-r1:8b"
+
+  # Alternative: direct Anthropic API
+  # provider: "anthropic"
+  # api_key: ""                    # ANTHROPIC_API_KEY
+  # model: "claude-sonnet-4-6"
+
+# ── Simulation settings ───────────────────────────────────────────────────────
+simulation:
+  region: "USA"
+  universe: "TOP3000"
+  neutralization: "SUBINDUSTRY"
+  delay: 1
+  decay: 0
+  truncation: 0.08
+
+# ── Quality gate (hard filters) ───────────────────────────────────────────────
+quality:
+  min_sharpe: 1.25
+  min_fitness: 1.0
+  min_turnover: 0.01
+  max_turnover: 0.70
+  min_long_count: 50
+  min_short_count: 50
+
+# ── Submission settings ───────────────────────────────────────────────────────
+submission:
+  max_per_day: 10
+  max_prod_correlation: 0.70
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+  results: "results/passing_alphas.jsonl"
+  checkpoint: "results/progress.json"
+  logs: "results/dear_alpha.log"
+
+# ── Mining modes ─────────────────────────────────────────────────────────────
+mining:
+  # Number of bare signals to generate per AI batch
+  ai_batch_size: 5
+  # Max template combinations to test per library entry (Cartesian mode)
+  template_max_per_entry: 500
+
+  # Pipeline miner settings (day1 → day2 → day3)
+  pipeline:
+    # Option A: hard-coded fields
+    fields:
+      - close
+      - volume
+      - returns
+      - vwap
+    # Option B: fetch from WQ API by dataset (comment out fields above)
+    # dataset_id: "analyst4"
+
+    field_prefix: ""      # used by prune() to deduplicate same-field results
+    prune_keep: 5         # max expressions per field carried to next stage
+    init_decay: 6
+
+    # Per-stage quality thresholds (can be looser than final gate)
+    stage1_filter:
+      min_sharpe: 1.0
+      min_fitness: 0.7
+    stage2_filter:
+      min_sharpe: 1.3
+      min_fitness: 1.0
+    stage3_filter:
+      min_sharpe: 1.3
+      min_fitness: 1.0
+
+  # Layered miner settings
+  layered:
+    template: "group_rank(ts_mean({field}, {window}), densify(sector))"
+    fields:
+      - close
+      - vwap
+      - volume
+      - adv20
+      - returns
+      - pe
+      - pb
+      - roe
+      - roa
+      - gm
+      - npm
+      - cashflow_op
+      - eps
+    keep_fields: 5
+    coarse_windows: [5, 22, 120]
+
+  # Bayesian optimiser settings
+  bayesian:
+    template: "group_rank(ts_mean({field}, {window}), densify(sector))"
+    n_trials: 50
+    param_space:
+      "{window}": ["int", 5, 240]
+      "{field}":  ["cat", ["close", "vwap", "volume", "returns", "adv20",
+                            "pe", "pb", "roe", "roa", "gm", "cashflow_op"]]

@@ -1,0 +1,13 @@
+# Credentials & secrets
+credential.txt
+config.yaml
+WQ挖掘脚本/credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Runtime outputs
+results/
+.claude/
